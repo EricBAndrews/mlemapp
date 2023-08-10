@@ -79,7 +79,7 @@ struct LayoutWidgetEditView: View {
                         .zIndex(1)
                         .opacity(
                             (widgetModel.widgetDraggingCollection == trayCollection
-                            && !barCollection.isValidDropLocation(widgetModel.widgetDragging))
+                             && !barCollection.isValidDropLocation(widgetModel.widgetDragging))
                             ? 0.3
                             : 1
                         )
@@ -120,7 +120,7 @@ struct LayoutWidgetEditView: View {
                         }
                     }
             )
-        
+            
             if widgetModel.shouldShowDraggingWidget {
                 HStack {
                     LayoutWidgetView(widget: widgetModel.widgetDragging!, animation: animation)
@@ -138,23 +138,23 @@ struct LayoutWidgetEditView: View {
     }
     
     func interactionBar(_ outerFrame: CGRect) -> some View {
-        Group {
-            GeometryReader { geometry in
-                let interactionbarView = {
-                    let rect = geometry.frame(in: .global).offsetBy(dx: 0, dy: -outerFrame.origin.y)
-                    barCollection.rect = rect.insetBy(dx: -20, dy: -60)
-                    
-                    return HStack(spacing: 10) {
-                        ForEach(barCollection.itemsToRender, id: \.self) { widget in
-                            placedWidgetView(widget, outerFrame: outerFrame)
-                        }
-                    }
-                    .animation(.default, value: barCollection.itemsToRender)
-                    .zIndex(1)
-                    .transition(.scale(scale: 1))
+        
+        func interactionbarView(geometry: GeometryProxy) -> some View {
+            let rect = geometry.frame(in: .global).offsetBy(dx: 0, dy: -outerFrame.origin.y)
+            barCollection.rect = rect.insetBy(dx: -20, dy: -60)
+            
+            return HStack(spacing: 10) {
+                ForEach(barCollection.itemsToRender, id: \.self) { widget in
+                    placedWidgetView(widget, outerFrame: outerFrame)
                 }
-                interactionbarView()
             }
+            .animation(.default, value: barCollection.itemsToRender)
+            .zIndex(1)
+            .transition(.scale(scale: 1))
+        }
+        
+        return GeometryReader { geometry in
+            interactionbarView(geometry: geometry)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 40)
@@ -181,52 +181,38 @@ struct LayoutWidgetEditView: View {
         }
         
         return GeometryReader { geometry in
+            let rect = geometry
+                .frame(in: .global).offsetBy(dx: 0, dy: -outerFrame.origin.y - 90)
+            trayCollection.rect = rect
             
-            let trayView = {
-                let rect = geometry
-                    .frame(in: .global).offsetBy(dx: 0, dy: -outerFrame.origin.y - 90)
-                trayCollection.rect = rect
-                
-                return VStack(spacing: 20) {
-                    HStack(spacing: 20) {
-                        trayWidgetView(.scoreCounter)
-                        trayWidgetView(.upvoteCounter)
-                        trayWidgetView(.downvoteCounter)
-                    }
-                    HStack(spacing: 20) {
-                        trayWidgetView(.upvote)
-                        trayWidgetView(.downvote)
-                        trayWidgetView(.save)
-                        trayWidgetView(.share)
-                        trayWidgetView(.reply)
-                    }
-                    Spacer()
+            return VStack(spacing: 20) {
+                HStack(spacing: 20) {
+                    trayWidgetView(.scoreCounter)
+                    trayWidgetView(.upvoteCounter)
+                    trayWidgetView(.downvoteCounter)
                 }
-                .frame(maxWidth: .infinity)
-                .frame(height: 300)
+                HStack(spacing: 20) {
+                    trayWidgetView(.upvote)
+                    trayWidgetView(.downvote)
+                    trayWidgetView(.save)
+                    trayWidgetView(.share)
+                    trayWidgetView(.reply)
+                }
+                Spacer()
             }
-            trayView()
+            .frame(maxWidth: .infinity)
+            .frame(height: 300)
         }
     }
     
     func placedWidgetView(_ widget: LayoutWidget?, outerFrame: CGRect) -> some View {
         let widgetWidth = widget?.type.width ?? (widgetModel.widgetDragging?.type.width ?? 0)
-        let stack = {
-                HStack {
+        func stack() -> some View {
+            return HStack {
                 GeometryReader { geometry in
                     Group {
                         if let widget = widget {
-                            let widgetView = {
-                                if widgetModel.widgetDragging == nil {
-                                    let rect = geometry.frame(in: .global)
-                                        .offsetBy(dx: -outerFrame.origin.x, dy: -outerFrame.origin.y)
-                                    widget.rect = rect
-                                }
-                                return LayoutWidgetView(widget: widget, isDragging: false, animation: animation)
-                                
-                            }
-                            
-                            widgetView()
+                            widgetView(geometry: geometry, widget: widget)
                         } else {
                             Color.clear
                                 .frame(maxWidth: widgetWidth, maxHeight: .infinity)
@@ -234,6 +220,15 @@ struct LayoutWidgetEditView: View {
                         }
                     }
                 }
+            }
+            
+            func widgetView(geometry: GeometryProxy, widget: LayoutWidget) -> some View {
+                if widgetModel.widgetDragging == nil {
+                    let rect = geometry.frame(in: .global)
+                        .offsetBy(dx: -outerFrame.origin.x, dy: -outerFrame.origin.y)
+                    widget.rect = rect
+                }
+                return LayoutWidgetView(widget: widget, isDragging: false, animation: animation)
             }
         }
         
